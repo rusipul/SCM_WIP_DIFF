@@ -1157,7 +1157,7 @@ class App:
 
         report_path, highlighted_path = derive_output_paths(t_path)
         try:
-            build_variance_report(stage_summary, lot_diff, report_path)
+            build_variance_report(stage_summary, lot_diff, report_path, today.column_labels)
             build_highlighted_today_file(t_path, lot_diff, highlighted_path)
         except PermissionError:
             messagebox.showerror("저장 실패", "파일이 열려있어 저장할 수 없습니다")
