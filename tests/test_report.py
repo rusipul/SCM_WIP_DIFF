@@ -96,6 +96,37 @@ def test_build_variance_report_writes_expected_sheets(tmp_path):
     assert removed_ws["E2"].value == 0
 
 
+def test_build_variance_report_applies_readability_formatting(tmp_path):
+    output_path = tmp_path / "report.xlsx"
+
+    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS)
+
+    wb = openpyxl.load_workbook(str(output_path))
+
+    for sheet_name in ["요약", "변동랏", "신규랏", "삭제랏"]:
+        ws = wb[sheet_name]
+        assert ws.freeze_panes == "A2"
+        header_row = next(ws.iter_rows(min_row=1, max_row=1))
+        assert all(cell.font.bold for cell in header_row if cell.value is not None)
+        assert ws.column_dimensions["A"].width is not None
+        assert ws.column_dimensions["A"].width > 0
+
+    summary_ws = wb["요약"]
+    assert summary_ws["B2"].number_format == "#,##0"
+    assert summary_ws["C2"].number_format == "#,##0"
+    assert summary_ws["D2"].number_format == "#,##0"
+
+    changed_ws = wb["변동랏"]
+    assert changed_ws["E2"].number_format == "#,##0"
+    assert changed_ws["F2"].number_format == "#,##0"
+
+    new_ws = wb["신규랏"]
+    assert new_ws["D2"].number_format == "#,##0"
+
+    removed_ws = wb["삭제랏"]
+    assert removed_ws["D2"].number_format == "#,##0"
+
+
 def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):
     today_copy = tmp_path / "260722 GTK WIP.xlsx"
     shutil.copyfile(FIXTURE_260722_PATH, today_copy)
