@@ -49,13 +49,14 @@ LOT_DIFF = {
     ],
     "new_lots": [{"key": ("m2", "l2", "d2", 0), "row_in_today": 8, "values": {9: 123, 12: 456}}],
     "removed_lots": [{"key": ("m3", "l3", "d3", 0), "row_in_yesterday": 9, "values": {9: 789, 12: 321}}],
+    "process_columns": [9, 10, 12],
 }
 
 
 def test_build_variance_report_writes_expected_sheets(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
-    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS)
+    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0")
 
     wb = openpyxl.load_workbook(str(output_path))
     assert wb.sheetnames == ["요약", "변동랏", "신규랏", "삭제랏"]
@@ -99,7 +100,7 @@ def test_build_variance_report_writes_expected_sheets(tmp_path):
 def test_build_variance_report_applies_readability_formatting(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
-    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS)
+    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0")
 
     wb = openpyxl.load_workbook(str(output_path))
 
