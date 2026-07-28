@@ -6,7 +6,7 @@ import openpyxl
 import pytest
 
 from scm_wip_diff.atx_parser import parse_atx_wip_sheet
-from scm_wip_diff.comparator import compare_lots, compare_stage_summary
+from scm_wip_diff.comparator import compare_lots, compare_stage_summary, compare_stage_summary_by_device
 from scm_wip_diff.report import build_highlighted_today_file, build_variance_report, derive_output_paths
 
 FIXTURE_260722_PATH = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -380,24 +380,31 @@ def test_atx_end_to_end_report_and_highlight(tmp_path):
     today = parse_atx_wip_sheet(FIXTURE_260724_ATX)
 
     stage_summary = compare_stage_summary(yesterday, today)
+    device_summary = compare_stage_summary_by_device(yesterday, today)
     lot_diff = compare_lots(yesterday, today)
 
     assert set(stage_summary.keys()) == {"전공정", "후공정"}
     assert len(lot_diff["changed_lots"]) == 81
     assert len(lot_diff["new_lots"]) == 25
     assert len(lot_diff["removed_lots"]) == 9
+    assert len(device_summary) == 11
+    assert list(device_summary.keys())[0] == "GTMP122007"
 
-    report_path = tmp_path / "report.xlsx"
+    report_path, highlighted_path = derive_output_paths(str(FIXTURE_260724_ATX), str(tmp_path))
     build_variance_report(
         stage_summary,
         lot_diff,
-        str(report_path),
+        report_path,
         today.column_labels,
         today.value_number_format,
         today.key_labels,
+        device_summary,
     )
-    report_wb = openpyxl.load_workbook(str(report_path))
+    report_wb = openpyxl.load_workbook(report_path)
     assert report_wb["요약"]["A2"].value == "전공정"
+    assert report_wb["요약"]["A9"].value == "[디바이스별 단계 수량]"
+    assert report_wb["요약"]["A10"].value == "디바이스"
+    assert report_wb["요약"]["A11"].value == "GTMP122007"
     assert report_wb["변동랏"]["E2"].number_format == "#,##0.00"
     assert report_wb["변동랏"]["A1"].value == "웨이퍼랏"
     assert report_wb["변동랏"]["B1"].value == "디바이스"
@@ -414,10 +421,9 @@ def test_atx_end_to_end_report_and_highlight(tmp_path):
 
     today_copy = tmp_path / "260724 ATX WIP.xlsx"
     shutil.copyfile(FIXTURE_260724_ATX, today_copy)
-    highlighted_path = tmp_path / "260724 ATX WIP_변동표시.xlsx"
-    build_highlighted_today_file(str(today_copy), lot_diff, str(highlighted_path), today.sheet_name)
+    build_highlighted_today_file(str(today_copy), lot_diff, highlighted_path, today.sheet_name)
 
-    highlighted_wb = openpyxl.load_workbook(str(highlighted_path))
+    highlighted_wb = openpyxl.load_workbook(highlighted_path)
     ws = highlighted_wb[today.sheet_name]
     first_changed = next(
         lot for lot in lot_diff["changed_lots"]
