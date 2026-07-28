@@ -13,8 +13,7 @@ NEW_LOT_FILL = PatternFill(fill_type="solid", fgColor="FFADD8E6")
 STAGE_ORDER = ["전공정", "후공정", "완료"]
 
 
-def derive_output_paths(today_path):
-    folder = os.path.dirname(today_path)
+def derive_output_paths(today_path, output_folder):
     basename = os.path.basename(today_path)
     name, ext = os.path.splitext(basename)
     match = re.match(r"^(\d{6})\s+(\S+)\s+WIP", basename)
@@ -23,8 +22,8 @@ def derive_output_paths(today_path):
         report_name = f"{date_prefix}_{company}_WIP_변동리포트.xlsx"
     else:
         report_name = f"{name}_WIP_변동리포트.xlsx"
-    report_path = os.path.join(folder, report_name)
-    highlighted_path = os.path.join(folder, f"{name}_변동표시{ext}")
+    report_path = os.path.join(output_folder, report_name)
+    highlighted_path = os.path.join(output_folder, f"{name}_변동표시{ext}")
     return report_path, highlighted_path
 
 

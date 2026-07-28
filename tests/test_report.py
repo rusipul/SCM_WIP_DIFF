@@ -19,19 +19,21 @@ def _file_hash(path):
         return hashlib.sha256(f.read()).hexdigest()
 
 
-def test_derive_output_paths_uses_date_prefix_and_same_folder():
+def test_derive_output_paths_uses_date_prefix_and_given_folder():
     today_path = os.path.join("C:", os.sep, "data", "260722 GTK WIP.xlsx")
+    output_folder = os.path.join("D:", os.sep, "reports")
 
-    report_path, highlighted_path = derive_output_paths(today_path)
+    report_path, highlighted_path = derive_output_paths(today_path, output_folder)
 
-    assert report_path == os.path.join("C:", os.sep, "data", "260722_GTK_WIP_변동리포트.xlsx")
-    assert highlighted_path == os.path.join("C:", os.sep, "data", "260722 GTK WIP_변동표시.xlsx")
+    assert report_path == os.path.join("D:", os.sep, "reports", "260722_GTK_WIP_변동리포트.xlsx")
+    assert highlighted_path == os.path.join("D:", os.sep, "reports", "260722 GTK WIP_변동표시.xlsx")
 
 
 def test_derive_output_paths_works_for_atx_filename():
     today_path = os.path.join("C:", os.sep, "data", "260723 ATX WIP.xlsx")
+    output_folder = os.path.join("C:", os.sep, "data")
 
-    report_path, highlighted_path = derive_output_paths(today_path)
+    report_path, highlighted_path = derive_output_paths(today_path, output_folder)
 
     assert report_path == os.path.join("C:", os.sep, "data", "260723_ATX_WIP_변동리포트.xlsx")
     assert highlighted_path == os.path.join("C:", os.sep, "data", "260723 ATX WIP_변동표시.xlsx")
@@ -39,8 +41,9 @@ def test_derive_output_paths_works_for_atx_filename():
 
 def test_derive_output_paths_falls_back_when_pattern_does_not_match():
     today_path = os.path.join("C:", os.sep, "data", "random_file.xlsx")
+    output_folder = os.path.join("C:", os.sep, "data")
 
-    report_path, highlighted_path = derive_output_paths(today_path)
+    report_path, highlighted_path = derive_output_paths(today_path, output_folder)
 
     assert report_path == os.path.join("C:", os.sep, "data", "random_file_WIP_변동리포트.xlsx")
     assert highlighted_path == os.path.join("C:", os.sep, "data", "random_file_변동표시.xlsx")
@@ -52,11 +55,22 @@ def test_derive_output_paths_falls_back_when_no_company_token_present():
     # date+company+WIP regex, so it falls through to the generic fallback,
     # producing a cosmetically odd but harmless "WIP_WIP" filename.
     today_path = os.path.join("C:", os.sep, "data", "260723 WIP.xlsx")
+    output_folder = os.path.join("C:", os.sep, "data")
 
-    report_path, highlighted_path = derive_output_paths(today_path)
+    report_path, highlighted_path = derive_output_paths(today_path, output_folder)
 
     assert report_path == os.path.join("C:", os.sep, "data", "260723 WIP_WIP_변동리포트.xlsx")
     assert highlighted_path == os.path.join("C:", os.sep, "data", "260723 WIP_변동표시.xlsx")
+
+
+def test_derive_output_paths_uses_output_folder_not_today_paths_folder():
+    today_path = os.path.join("C:", os.sep, "somewhere", "260722 GTK WIP.xlsx")
+    output_folder = os.path.join("E:", os.sep, "다른폴더")
+
+    report_path, highlighted_path = derive_output_paths(today_path, output_folder)
+
+    assert report_path == os.path.join("E:", os.sep, "다른폴더", "260722_GTK_WIP_변동리포트.xlsx")
+    assert highlighted_path == os.path.join("E:", os.sep, "다른폴더", "260722 GTK WIP_변동표시.xlsx")
 
 
 STAGE_SUMMARY = {
