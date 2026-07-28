@@ -160,3 +160,30 @@ def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_
     assert ws.cell(row=21, column=1).fill.fgColor.rgb != "FFFF0000"
     assert ws.cell(row=22, column=1).fill.fgColor.rgb == "FFADD8E6"
     assert ws.cell(row=22, column=38).fill.fgColor.rgb == "FFADD8E6"
+
+
+def test_build_highlighted_today_file_uses_sheet_name_not_first_sheet(tmp_path):
+    wb = openpyxl.Workbook()
+    first_ws = wb.active
+    first_ws.title = "OtherSheet"
+    first_ws["A1"] = "unrelated"
+    target_ws = wb.create_sheet("TargetSheet")
+    target_ws["A1"] = "data"
+    today_path = tmp_path / "multi_sheet.xlsx"
+    wb.save(today_path)
+
+    lot_diff = {
+        "changed_lots": [
+            {"key": ("m1", "l1", "d1", 0), "row_in_today": 1, "changes": [{"col": 1, "label": "A(A)", "before": 1, "after": 2}]},
+        ],
+        "new_lots": [],
+        "removed_lots": [],
+    }
+
+    output_path = tmp_path / "multi_sheet_highlighted.xlsx"
+    build_highlighted_today_file(str(today_path), lot_diff, str(output_path), "TargetSheet")
+
+    result_wb = openpyxl.load_workbook(str(output_path))
+    assert result_wb.sheetnames[0] == "OtherSheet"
+    assert result_wb["TargetSheet"].cell(row=1, column=1).fill.fgColor.rgb == "FFFF0000"
+    assert result_wb["OtherSheet"].cell(row=1, column=1).fill.fgColor.rgb != "FFFF0000"
