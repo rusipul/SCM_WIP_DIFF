@@ -3,6 +3,7 @@ import os
 import shutil
 
 import openpyxl
+import pytest
 
 from scm_wip_diff.atx_parser import parse_atx_wip_sheet
 from scm_wip_diff.comparator import compare_lots, compare_stage_summary
@@ -195,6 +196,20 @@ def test_build_variance_report_uses_atx_key_labels_not_gtk_hardcoded_headers(tmp
     assert removed_ws["A1"].value == "웨이퍼랏"
     assert removed_ws["B1"].value == "디바이스"
     assert removed_ws["C1"].value == "컨트롤랏"
+
+
+def test_build_variance_report_rejects_key_labels_of_wrong_length(tmp_path):
+    output_path = tmp_path / "report.xlsx"
+
+    with pytest.raises(ValueError):
+        build_variance_report(
+            STAGE_SUMMARY,
+            LOT_DIFF,
+            str(output_path),
+            COLUMN_LABELS,
+            "#,##0",
+            ("웨이퍼랏", "디바이스"),
+        )
 
 
 def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):

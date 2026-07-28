@@ -58,6 +58,9 @@ def _apply_readability_formatting(ws, number_format_columns, number_format):
 def build_variance_report(
     stage_summary, lot_diff, output_path, column_labels, value_number_format, key_labels
 ):
+    if len(key_labels) != 3:
+        raise ValueError(f"key_labels must have exactly 3 elements, got {len(key_labels)}: {key_labels}")
+
     wb = openpyxl.Workbook()
 
     summary_ws = wb.active
@@ -76,9 +79,9 @@ def build_variance_report(
     changed_ws = wb.create_sheet("변동랏")
     changed_ws.append(list(key_labels) + ["변경컬럼", "어제값", "오늘값"])
     for lot in lot_diff["changed_lots"]:
-        mo, lot_no, device, _ = lot["key"]
+        key1, key2, key3, _ = lot["key"]
         for change in lot["changes"]:
-            changed_ws.append([mo, lot_no, device, change["label"], change["before"], change["after"]])
+            changed_ws.append([key1, key2, key3, change["label"], change["before"], change["after"]])
     _apply_readability_formatting(changed_ws, number_format_columns=[5, 6], number_format=value_number_format)
 
     process_columns = lot_diff["process_columns"]
@@ -88,17 +91,17 @@ def build_variance_report(
     new_ws = wb.create_sheet("신규랏")
     new_ws.append(list(key_labels) + process_headers)
     for lot in lot_diff["new_lots"]:
-        mo, lot_no, device, _ = lot["key"]
+        key1, key2, key3, _ = lot["key"]
         values = lot["values"]
-        new_ws.append([mo, lot_no, device] + [values.get(col, 0) for col in process_columns])
+        new_ws.append([key1, key2, key3] + [values.get(col, 0) for col in process_columns])
     _apply_readability_formatting(new_ws, number_format_columns=process_number_format_columns, number_format=value_number_format)
 
     removed_ws = wb.create_sheet("삭제랏")
     removed_ws.append(list(key_labels) + process_headers)
     for lot in lot_diff["removed_lots"]:
-        mo, lot_no, device, _ = lot["key"]
+        key1, key2, key3, _ = lot["key"]
         values = lot["values"]
-        removed_ws.append([mo, lot_no, device] + [values.get(col, 0) for col in process_columns])
+        removed_ws.append([key1, key2, key3] + [values.get(col, 0) for col in process_columns])
     _apply_readability_formatting(removed_ws, number_format_columns=process_number_format_columns, number_format=value_number_format)
 
     wb.save(output_path)
