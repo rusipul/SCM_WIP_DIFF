@@ -1,5 +1,6 @@
 from scm_wip_diff.parser import ParsedWip, parse_wip_sheet
 from scm_wip_diff.comparator import compare_stage_summary
+from scm_wip_diff.comparator import compare_lots
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -38,3 +39,59 @@ def test_compare_stage_summary_matches_real_fixture_totals():
     assert summary["전공정"] == {"yesterday": 2960364, "today": 3438725, "delta": 478361}
     assert summary["후공정"] == {"yesterday": 2010299, "today": 1782025, "delta": -228274}
     assert summary["완료"] == {"yesterday": 2948085, "today": 3130907, "delta": 182822}
+
+
+def test_compare_lots_detects_changed_columns_in_column_order():
+    yesterday = make_parsed({
+        ("m1", "l1", "d1", 0): {9: 347638, 12: 0, 29: 0},
+    })
+    today = make_parsed({
+        ("m1", "l1", "d1", 0): {9: 0, 12: 316800, 29: 0},
+    })
+
+    diff = compare_lots(yesterday, today)
+
+    assert len(diff["changed_lots"]) == 1
+    lot = diff["changed_lots"][0]
+    assert lot["key"] == ("m1", "l1", "d1", 0)
+    assert lot["changes"] == [
+        {"col": 9, "label": "Saw(I)", "before": 347638, "after": 0},
+        {"col": 12, "label": "Mold(L)", "before": 0, "after": 316800},
+    ]
+
+
+def test_compare_lots_detects_new_and_removed_keys():
+    yesterday = make_parsed({
+        ("m1", "l1", "d1", 0): {9: 0, 12: 0, 29: 0},
+    })
+    today = make_parsed({
+        ("m2", "l2", "d2", 0): {9: 0, 12: 0, 29: 0},
+    })
+
+    diff = compare_lots(yesterday, today)
+
+    assert diff["changed_lots"] == []
+    assert [lot["key"] for lot in diff["new_lots"]] == [("m2", "l2", "d2", 0)]
+    assert [lot["key"] for lot in diff["removed_lots"]] == [("m1", "l1", "d1", 0)]
+
+
+def test_compare_lots_matches_real_fixture_counts():
+    yesterday = parse_wip_sheet(FIXTURE_260721)
+    today = parse_wip_sheet(FIXTURE_260722)
+
+    diff = compare_lots(yesterday, today)
+
+    assert len(diff["changed_lots"]) == 19
+    assert len(diff["new_lots"]) == 1
+    assert len(diff["removed_lots"]) == 2
+    assert diff["new_lots"][0]["key"] == ("MNS08M6622326", "1B3C76", "TMP1230", 0)
+
+    saw_to_die_mount = next(
+        lot for lot in diff["changed_lots"]
+        if lot["key"] == ("TNT0896622324", "1B3C75", "TMP1202D", 0)
+    )
+    assert saw_to_die_mount["row_in_today"] == 21
+    assert saw_to_die_mount["changes"] == [
+        {"col": 9, "label": "Saw(I)", "before": 347638, "after": 0},
+        {"col": 10, "label": "Die Mount(J)", "before": 316800, "after": 664438},
+    ]
