@@ -8,6 +8,8 @@ STAGE_ORDER = ["전공정", "후공정", "완료"]
 def compare_stage_summary(yesterday, today):
     summary = {}
     for stage in STAGE_ORDER:
+        # Assumes yesterday/today are the same detected format (enforced in gui.py);
+        # a stage present only in today.stage_groups is intentionally still omitted.
         if stage not in yesterday.stage_groups:
             continue
         y_cols = yesterday.stage_groups.get(stage, [])

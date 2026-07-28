@@ -63,6 +63,28 @@ def test_compare_stage_summary_omits_stages_not_present_in_source_data():
     assert set(summary.keys()) == {"전공정", "후공정"}
 
 
+def test_compare_stage_summary_omits_stage_present_only_in_today():
+    # yesterday has no "완료" group at all; today does, with real nonzero
+    # data. The yesterday-only presence check must still omit "완료" from
+    # the summary rather than pick it up from today's side.
+    yesterday = ParsedWip(
+        column_labels={9: "Saw"},
+        stage_groups={"전공정": [9]},
+        lots={("m1", "l1", "d1", 0): {9: 10}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+    today = ParsedWip(
+        column_labels={9: "Saw", 29: "TR Stock"},
+        stage_groups={"전공정": [9], "완료": [29]},
+        lots={("m1", "l1", "d1", 0): {9: 5, 29: 123}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+
+    summary = compare_stage_summary(yesterday, today)
+
+    assert "완료" not in summary
+
+
 def test_compare_lots_detects_changed_columns_in_column_order():
     yesterday = make_parsed({
         ("m1", "l1", "d1", 0): {9: 347638, 12: 0, 29: 0},
