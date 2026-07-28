@@ -301,6 +301,19 @@ def test_build_variance_report_device_section_omits_absent_stages(tmp_path):
     assert summary_ws["G11"].value == 100
 
 
+def test_build_variance_report_device_section_with_no_devices(tmp_path):
+    output_path = tmp_path / "report.xlsx"
+
+    build_variance_report(
+        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스"), {}
+    )
+
+    wb = openpyxl.load_workbook(str(output_path))
+    summary_ws = wb["요약"]
+    assert summary_ws["A11"].value == "디바이스"
+    assert summary_ws["A12"].value is None
+
+
 def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):
     today_copy = tmp_path / "260722 GTK WIP.xlsx"
     shutil.copyfile(FIXTURE_260722_PATH, today_copy)

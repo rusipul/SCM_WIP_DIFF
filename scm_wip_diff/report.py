@@ -80,8 +80,12 @@ def build_variance_report(
         summary_ws.append([])
         summary_ws.append(["[디바이스별 단계 수량]"])
         device_header = ["디바이스"]
+        device_number_format_columns = []
+        col = 2
         for stage in present_stages:
             device_header += [f"{stage} 어제", f"{stage} 오늘", f"{stage} 증감"]
+            device_number_format_columns += [col, col + 1, col + 2]
+            col += 3
         summary_ws.append(device_header)
         for device in device_summary:
             row = [device]
@@ -89,7 +93,6 @@ def build_variance_report(
                 s = device_summary[device].get(stage, {"yesterday": 0, "today": 0, "delta": 0})
                 row += [s["yesterday"], s["today"], s["delta"]]
             summary_ws.append(row)
-        device_number_format_columns = list(range(5, 2 + len(present_stages) * 3))
 
     _apply_readability_formatting(
         summary_ws,
