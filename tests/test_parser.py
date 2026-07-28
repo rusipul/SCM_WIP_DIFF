@@ -2,6 +2,7 @@ import openpyxl
 import pytest
 
 from scm_wip_diff.parser import find_report_anchor, get_stage_groups, ReportFormatError
+from scm_wip_diff.parser import build_column_labels
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -34,3 +35,18 @@ def test_get_stage_groups_matches_merged_header_cells():
     assert groups["전공정"] == [9, 10, 11]
     assert groups["후공정"] == list(range(12, 29))
     assert groups["완료"] == [29, 30]
+
+
+def test_build_column_labels_combines_two_header_rows():
+    wb = openpyxl.load_workbook(FIXTURE_260721, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+    anchor = find_report_anchor(ws)
+
+    labels = build_column_labels(ws, anchor)
+
+    assert labels[9] == "Saw"
+    assert labels[10] == "Die Mount"
+    assert labels[11] == "Wire Bond"
+    assert labels[21] == "Ball Mount"
+    assert labels[29] == "TR Stock"
+    assert labels[30] == "Non TR Stock"
