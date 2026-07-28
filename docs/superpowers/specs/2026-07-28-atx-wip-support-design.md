@@ -36,7 +36,16 @@ scm_wip_diff/
 └── main.py              # 변경 없음
 ```
 
-`comparator.py`의 `compare_stage_summary`/`compare_lots`/`check_lot_overlap`은 `ParsedWip`(column_labels, stage_groups, lots, rows)만 알면 동작하므로, ATX 지원을 위해 이 파일을 수정할 필요가 없다. 새 포맷을 추가할 때마다 파서 하나만 추가하면 되는 구조를 유지한다.
+`comparator.py`의 `compare_stage_summary`/`check_lot_overlap`은 `ParsedWip`(column_labels, stage_groups, lots, rows)만 알면 동작하므로 수정이 필요 없다. 다만 실제 코드를 재확인한 결과 `compare_lots`와 `report.py`의 `build_variance_report`는 GTK 전용 상수 `PROCESS_COL_START`/`PROCESS_COL_END`(9~30, GTK의 I~AD)를 하드코딩해서 비교 대상 컬럼 범위를 정하고 있었다. ATX는 컬럼 범위가 다르고(13~22, 24~46) 중간에 소계 컬럼(23열)으로 끊겨 있어 이 상수를 그대로 쓸 수 없다.
+
+이를 바로잡기 위해 두 함수를 다음과 같이 일반화한다:
+- `compare_lots`는 비교할 컬럼 목록을 고정 상수 대신 `yesterday.stage_groups`와 `today.stage_groups`에 실제로 포함된 컬럼 인덱스의 합집합에서 동적으로 계산한다 (GTK는 9~30 연속, ATX는 13~22+24~46처럼 중간이 끊겨도 동일하게 동작).
+- 이 계산된 컬럼 목록을 `compare_lots`의 반환값에 `process_columns`로 함께 담아, `report.py`가 같은 목록을 다시 계산하지 않고 그대로 받아 쓰도록 한다.
+- `report.py`는 `scm_wip_diff.parser`의 `PROCESS_COL_START`/`PROCESS_COL_END` import와 모듈 레벨 `PROCESS_COLS` 상수를 제거하고, `build_variance_report`가 `lot_diff["process_columns"]`를 사용하도록 바꾼다.
+
+이 정리로 `comparator.py`/`report.py`가 애초 의도대로 `ParsedWip` 구조에만 의존하고 GTK 고유 상수에 더 이상 의존하지 않게 된다 (기존 GTK 동작은 결과적으로 동일하게 유지됨 — 9~30 범위가 전공정+후공정+완료 그룹의 합집합과 정확히 일치하기 때문).
+
+또한 `compare_stage_summary`는 현재 `STAGE_ORDER = ["전공정", "후공정", "완료"]`를 무조건 3개 다 순회해서, 데이터에 없는 그룹도 `{"yesterday": 0, "today": 0, "delta": 0}`으로 채워 넣는다. ATX는 "완료" 그룹 자체가 없으므로 이대로 두면 GUI/리포트에 "완료: 0 -> 0 (+0)"처럼 실제로 존재하지 않는 단계가 마치 변동 없는 단계인 것처럼 표시되어 오해를 준다. `compare_stage_summary`가 `yesterday.stage_groups`(와 `today.stage_groups`)에 실제로 존재하는 단계만 결과에 포함하도록 고친다 (GTK는 3개 다 존재하므로 동작 변화 없음). `report.py`의 `build_variance_report`는 이미 `if stage in stage_summary:`로 존재 여부를 확인하고 있어 추가 수정이 필요 없지만, `gui.py`의 `_show_preview`는 `("전공정", "후공정", "완료")`를 고정으로 순회하고 있어 `stage_summary`에 실제로 있는 키만 순회하도록 고쳐야 한다.
 
 ## `format_detect.py`
 
