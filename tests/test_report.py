@@ -23,6 +23,24 @@ def test_derive_output_paths_uses_date_prefix_and_same_folder():
     assert highlighted_path == os.path.join("C:", os.sep, "data", "260722 GTK WIP_변동표시.xlsx")
 
 
+def test_derive_output_paths_works_for_atx_filename():
+    today_path = os.path.join("C:", os.sep, "data", "260723 ATX WIP.xlsx")
+
+    report_path, highlighted_path = derive_output_paths(today_path)
+
+    assert report_path == os.path.join("C:", os.sep, "data", "260723_ATX_WIP_변동리포트.xlsx")
+    assert highlighted_path == os.path.join("C:", os.sep, "data", "260723 ATX WIP_변동표시.xlsx")
+
+
+def test_derive_output_paths_falls_back_when_pattern_does_not_match():
+    today_path = os.path.join("C:", os.sep, "data", "random_file.xlsx")
+
+    report_path, highlighted_path = derive_output_paths(today_path)
+
+    assert report_path == os.path.join("C:", os.sep, "data", "random_file_WIP_변동리포트.xlsx")
+    assert highlighted_path == os.path.join("C:", os.sep, "data", "random_file_변동표시.xlsx")
+
+
 STAGE_SUMMARY = {
     "전공정": {"yesterday": 100, "today": 50, "delta": -50},
     "후공정": {"yesterday": 10, "today": 110, "delta": 100},
