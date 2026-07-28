@@ -102,12 +102,25 @@ LOT_DIFF = {
     "process_columns": [9, 10, 12],
 }
 
+DEVICE_SUMMARY = {
+    "d1": {
+        "전공정": {"yesterday": 100, "today": 0, "delta": -100},
+        "후공정": {"yesterday": 0, "today": 100, "delta": 100},
+        "완료": {"yesterday": 0, "today": 0, "delta": 0},
+    },
+    "d2": {
+        "전공정": {"yesterday": 0, "today": 0, "delta": 0},
+        "후공정": {"yesterday": 10, "today": 10, "delta": 0},
+        "완료": {"yesterday": 0, "today": 0, "delta": 0},
+    },
+}
+
 
 def test_build_variance_report_writes_expected_sheets(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
     build_variance_report(
-        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스")
+        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스"), DEVICE_SUMMARY
     )
 
     wb = openpyxl.load_workbook(str(output_path))
@@ -148,12 +161,33 @@ def test_build_variance_report_writes_expected_sheets(tmp_path):
     assert removed_ws["D2"].value == 789
     assert removed_ws["E2"].value == 0
 
+    assert summary_ws["A10"].value == "[디바이스별 단계 수량]"
+    assert summary_ws["A11"].value == "디바이스"
+    assert summary_ws["B11"].value == "전공정 어제"
+    assert summary_ws["C11"].value == "전공정 오늘"
+    assert summary_ws["D11"].value == "전공정 증감"
+    assert summary_ws["E11"].value == "후공정 어제"
+    assert summary_ws["F11"].value == "후공정 오늘"
+    assert summary_ws["G11"].value == "후공정 증감"
+    assert summary_ws["H11"].value == "완료 어제"
+    assert summary_ws["I11"].value == "완료 오늘"
+    assert summary_ws["J11"].value == "완료 증감"
+    assert summary_ws["A12"].value == "d1"
+    assert summary_ws["B12"].value == 100
+    assert summary_ws["C12"].value == 0
+    assert summary_ws["D12"].value == -100
+    assert summary_ws["E12"].value == 0
+    assert summary_ws["F12"].value == 100
+    assert summary_ws["G12"].value == 100
+    assert summary_ws["A13"].value == "d2"
+    assert summary_ws["F13"].value == 10
+
 
 def test_build_variance_report_applies_readability_formatting(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
     build_variance_report(
-        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스")
+        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스"), DEVICE_SUMMARY
     )
 
     wb = openpyxl.load_workbook(str(output_path))
@@ -181,6 +215,10 @@ def test_build_variance_report_applies_readability_formatting(tmp_path):
     removed_ws = wb["삭제랏"]
     assert removed_ws["D2"].number_format == "#,##0"
 
+    assert summary_ws["B12"].number_format == "#,##0"
+    assert summary_ws["G12"].number_format == "#,##0"
+    assert summary_ws["I12"].number_format == "#,##0"
+
 
 def test_build_variance_report_uses_atx_key_labels_not_gtk_hardcoded_headers(tmp_path):
     output_path = tmp_path / "report.xlsx"
@@ -192,6 +230,7 @@ def test_build_variance_report_uses_atx_key_labels_not_gtk_hardcoded_headers(tmp
         COLUMN_LABELS,
         "#,##0",
         ("웨이퍼랏", "디바이스", "컨트롤랏"),
+        DEVICE_SUMMARY,
     )
 
     wb = openpyxl.load_workbook(str(output_path))
@@ -223,7 +262,43 @@ def test_build_variance_report_rejects_key_labels_of_wrong_length(tmp_path):
             COLUMN_LABELS,
             "#,##0",
             ("웨이퍼랏", "디바이스"),
+            DEVICE_SUMMARY,
         )
+
+
+def test_build_variance_report_device_section_omits_absent_stages(tmp_path):
+    output_path = tmp_path / "report.xlsx"
+    two_stage_summary = {
+        "전공정": {"yesterday": 100, "today": 50, "delta": -50},
+        "후공정": {"yesterday": 10, "today": 110, "delta": 100},
+    }
+    two_stage_device_summary = {
+        "d1": {
+            "전공정": {"yesterday": 100, "today": 50, "delta": -50},
+            "후공정": {"yesterday": 10, "today": 110, "delta": 100},
+        },
+    }
+
+    build_variance_report(
+        two_stage_summary,
+        LOT_DIFF,
+        str(output_path),
+        COLUMN_LABELS,
+        "#,##0.00",
+        ("웨이퍼랏", "디바이스", "컨트롤랏"),
+        two_stage_device_summary,
+    )
+
+    wb = openpyxl.load_workbook(str(output_path))
+    summary_ws = wb["요약"]
+    assert summary_ws["A9"].value == "[디바이스별 단계 수량]"
+    assert summary_ws["A10"].value == "디바이스"
+    assert summary_ws["B10"].value == "전공정 어제"
+    assert summary_ws["E10"].value == "후공정 어제"
+    assert summary_ws["G10"].value == "후공정 증감"
+    assert summary_ws["A11"].value == "d1"
+    assert summary_ws["E11"].value == 10
+    assert summary_ws["G11"].value == 100
 
 
 def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):

@@ -55,7 +55,7 @@ def _apply_readability_formatting(ws, number_format_columns, number_format):
 
 
 def build_variance_report(
-    stage_summary, lot_diff, output_path, column_labels, value_number_format, key_labels
+    stage_summary, lot_diff, output_path, column_labels, value_number_format, key_labels, device_summary
 ):
     if len(key_labels) != 3:
         raise ValueError(f"key_labels must have exactly 3 elements, got {len(key_labels)}: {key_labels}")
@@ -73,7 +73,29 @@ def build_variance_report(
     summary_ws.append(["변경된 랏 수", len(lot_diff["changed_lots"])])
     summary_ws.append(["신규 랏 수", len(lot_diff["new_lots"])])
     summary_ws.append(["삭제된 랏 수", len(lot_diff["removed_lots"])])
-    _apply_readability_formatting(summary_ws, number_format_columns=[2, 3, 4], number_format=value_number_format)
+
+    present_stages = [stage for stage in STAGE_ORDER if stage in stage_summary]
+    device_number_format_columns = []
+    if present_stages:
+        summary_ws.append([])
+        summary_ws.append(["[디바이스별 단계 수량]"])
+        device_header = ["디바이스"]
+        for stage in present_stages:
+            device_header += [f"{stage} 어제", f"{stage} 오늘", f"{stage} 증감"]
+        summary_ws.append(device_header)
+        for device in device_summary:
+            row = [device]
+            for stage in present_stages:
+                s = device_summary[device].get(stage, {"yesterday": 0, "today": 0, "delta": 0})
+                row += [s["yesterday"], s["today"], s["delta"]]
+            summary_ws.append(row)
+        device_number_format_columns = list(range(5, 2 + len(present_stages) * 3))
+
+    _apply_readability_formatting(
+        summary_ws,
+        number_format_columns=[2, 3, 4] + device_number_format_columns,
+        number_format=value_number_format,
+    )
 
     changed_ws = wb.create_sheet("변동랏")
     changed_ws.append(list(key_labels) + ["변경컬럼", "어제값", "오늘값"])
