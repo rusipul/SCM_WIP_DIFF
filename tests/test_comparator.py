@@ -113,6 +113,33 @@ def test_compare_lots_handles_noncontiguous_process_columns():
     ]
 
 
+def test_compare_lots_tolerates_column_missing_from_todays_labels():
+    # Simulates ATX-style drift: yesterday's stage_groups includes a column
+    # that today's stage_groups (and therefore today's column_labels) no
+    # longer has. The union in process_columns still includes it, so
+    # compare_lots must not raise KeyError when looking up the label.
+    yesterday = ParsedWip(
+        column_labels={13: "A", 14: "B", 15: "E", 20: "C"},
+        stage_groups={"전공정": [13, 14, 15], "후공정": [20]},
+        lots={("m1", "l1", "d1", 0): {13: 1.0, 14: 2.0, 15: 5.0, 20: 3.0}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+    today = ParsedWip(
+        column_labels={13: "A", 14: "B", 20: "C"},
+        stage_groups={"전공정": [13, 14], "후공정": [20]},
+        lots={("m1", "l1", "d1", 0): {13: 1.0, 14: 2.0, 20: 3.0}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+
+    diff = compare_lots(yesterday, today)
+
+    assert diff["process_columns"] == [13, 14, 15, 20]
+    assert len(diff["changed_lots"]) == 1
+    assert diff["changed_lots"][0]["changes"] == [
+        {"col": 15, "label": "(O)", "before": 5.0, "after": 0},
+    ]
+
+
 def test_compare_lots_matches_real_fixture_counts():
     yesterday = parse_wip_sheet(FIXTURE_260721)
     today = parse_wip_sheet(FIXTURE_260722)

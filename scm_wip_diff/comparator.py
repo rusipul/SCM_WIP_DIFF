@@ -41,7 +41,7 @@ def compare_lots(yesterday, today):
             before = y_vals.get(col, 0)
             after = t_vals.get(col, 0)
             if before != after:
-                label = f"{today.column_labels[col]}({get_column_letter(col)})"
+                label = f"{today.column_labels.get(col, '')}({get_column_letter(col)})"
                 changes.append({"col": col, "label": label, "before": before, "after": after})
         if changes:
             changed_lots.append({
