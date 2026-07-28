@@ -81,4 +81,5 @@ def parse_atx_wip_sheet(path):
         sheet_name=ws.title,
         value_number_format=VALUE_NUMBER_FORMAT,
         key_labels=("웨이퍼랏", "디바이스", "컨트롤랏"),
+        device_key_index=1,
     )

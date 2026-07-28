@@ -111,3 +111,9 @@ def test_parse_wip_sheet_populates_key_labels():
     parsed = parse_wip_sheet(FIXTURE_260721)
 
     assert parsed.key_labels == ("MO", "랏번호", "디바이스")
+
+
+def test_parse_wip_sheet_populates_device_key_index():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+
+    assert parsed.device_key_index == 2

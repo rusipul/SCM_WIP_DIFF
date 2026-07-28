@@ -88,3 +88,9 @@ def test_parse_atx_wip_sheet_populates_key_labels():
     parsed = parse_atx_wip_sheet(FIXTURE_260723)
 
     assert parsed.key_labels == ("웨이퍼랏", "디바이스", "컨트롤랏")
+
+
+def test_parse_atx_wip_sheet_populates_device_key_index():
+    parsed = parse_atx_wip_sheet(FIXTURE_260723)
+
+    assert parsed.device_key_index == 1
