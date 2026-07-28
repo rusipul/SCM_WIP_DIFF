@@ -4,6 +4,7 @@ import pytest
 from scm_wip_diff.parser import find_report_anchor, get_stage_groups, ReportFormatError
 from scm_wip_diff.parser import build_column_labels
 from scm_wip_diff.parser import parse_wip_sheet
+from scm_wip_diff.parser import REPORT_TITLE
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -67,6 +68,26 @@ def test_parse_wip_sheet_extracts_process_values_for_first_data_row():
     assert parsed.lots[key][9] == 0     # Saw
     assert parsed.lots[key][29] == 0    # TR Stock
     assert parsed.lots[key][30] == 24627  # Non TR Stock
+
+
+def test_parse_wip_sheet_raises_when_stage_group_missing(tmp_path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.cell(row=2, column=1, value=REPORT_TITLE)
+
+    # Group-header row (anchor + 1 = 3). Only "전공정" and "후공정" are
+    # given merged cells; "완료" is intentionally omitted to simulate
+    # format drift in the source file.
+    ws.merge_cells(start_row=3, start_column=9, end_row=3, end_column=11)
+    ws.cell(row=3, column=9, value="전공정")
+    ws.merge_cells(start_row=3, start_column=12, end_row=3, end_column=28)
+    ws.cell(row=3, column=12, value="후공정")
+
+    path = tmp_path / "broken.xlsx"
+    wb.save(path)
+
+    with pytest.raises(ReportFormatError):
+        parse_wip_sheet(str(path))
 
 
 def test_parse_wip_sheet_disambiguates_duplicate_keys_by_occurrence():

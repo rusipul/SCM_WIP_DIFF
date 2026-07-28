@@ -2,6 +2,8 @@
 
 from openpyxl.utils import get_column_letter
 
+from scm_wip_diff.parser import PROCESS_COL_START, PROCESS_COL_END
+
 STAGE_ORDER = ["전공정", "후공정", "완료"]
 
 
@@ -30,7 +32,7 @@ def compare_lots(yesterday, today):
         y_vals = yesterday.lots[key]
         t_vals = today.lots[key]
         changes = []
-        for col in range(9, 31):
+        for col in range(PROCESS_COL_START, PROCESS_COL_END + 1):
             before = y_vals.get(col, 0)
             after = t_vals.get(col, 0)
             if before != after:

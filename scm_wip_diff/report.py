@@ -7,6 +7,8 @@ import openpyxl
 from openpyxl.styles import PatternFill
 from openpyxl.utils import get_column_letter
 
+from scm_wip_diff.parser import PROCESS_COL_START, PROCESS_COL_END
+
 RED_FILL = PatternFill(fill_type="solid", fgColor="FFFF0000")
 NEW_LOT_FILL = PatternFill(fill_type="solid", fgColor="FFADD8E6")
 
@@ -24,7 +26,7 @@ def derive_output_paths(today_path):
     return report_path, highlighted_path
 
 
-PROCESS_COLS = range(9, 31)
+PROCESS_COLS = range(PROCESS_COL_START, PROCESS_COL_END + 1)
 
 
 def _process_column_headers(column_labels):

@@ -7,6 +7,7 @@ import openpyxl
 REPORT_TITLE = "Report for Assy or Turn-key WIP"
 PROCESS_COL_START = 9   # I
 PROCESS_COL_END = 30    # AD
+REQUIRED_STAGE_LABELS = {"전공정", "후공정", "완료"}
 
 
 class ReportFormatError(Exception):
@@ -58,6 +59,9 @@ def parse_wip_sheet(path):
 
     anchor = find_report_anchor(ws)
     groups = get_stage_groups(ws, anchor)
+    missing = REQUIRED_STAGE_LABELS - set(groups.keys())
+    if missing:
+        raise ReportFormatError(f"필수 공정 그룹을 찾을 수 없습니다: {missing}")
     labels = build_column_labels(ws, anchor)
     data_start = anchor + 5
 
