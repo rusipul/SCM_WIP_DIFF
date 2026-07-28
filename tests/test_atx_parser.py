@@ -1,7 +1,7 @@
 import openpyxl
 import pytest
 
-from scm_wip_diff.atx_parser import find_atx_sheet, get_atx_stage_groups
+from scm_wip_diff.atx_parser import find_atx_sheet, get_atx_stage_groups, parse_atx_wip_sheet
 from scm_wip_diff.parser import ReportFormatError
 
 FIXTURE_260723 = "tests/fixtures/260723 ATX WIP.xlsx"
@@ -53,3 +53,32 @@ def test_get_atx_stage_groups_raises_when_required_label_missing():
 
     with pytest.raises(ReportFormatError):
         get_atx_stage_groups(ws)
+
+
+def test_parse_atx_wip_sheet_reads_all_lot_rows():
+    parsed = parse_atx_wip_sheet(FIXTURE_260723)
+
+    assert len(parsed.lots) == 125
+    assert parsed.sheet_name == "KSWIPAY (PKG)"
+    assert parsed.value_number_format == "#,##0.00"
+
+
+def test_parse_atx_wip_sheet_extracts_process_values_for_first_data_row():
+    parsed = parse_atx_wip_sheet(FIXTURE_260723)
+    key = ("BQ8886001A", "GTMP122007", "TPSJ26N009", 0)
+
+    assert parsed.rows[key] == 3
+    assert parsed.lots[key][13] == 0.0     # UNISSUE
+    assert parsed.lots[key][16] == 54.66   # Die_Bond
+
+
+def test_parse_atx_wip_sheet_disambiguates_duplicate_keys_by_occurrence():
+    parsed = parse_atx_wip_sheet(FIXTURE_260723)
+    base = ("BQ8873301A", "GTMP17500D", "TPNJ28N009")
+
+    assert parsed.rows[base + (0,)] == 13
+    assert parsed.rows[base + (1,)] == 14
+    assert parsed.rows[base + (2,)] == 15
+    assert parsed.lots[base + (0,)][17] == 22.98   # Wire_Bond
+    assert parsed.lots[base + (1,)][17] == 28.61
+    assert parsed.lots[base + (2,)][17] == 34.48
