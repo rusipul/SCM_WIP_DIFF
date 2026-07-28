@@ -105,3 +105,9 @@ def test_parse_wip_sheet_populates_sheet_name_and_number_format():
 
     assert parsed.sheet_name == "gtk3387"
     assert parsed.value_number_format == "#,##0"
+
+
+def test_parse_wip_sheet_populates_key_labels():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+
+    assert parsed.key_labels == ("MO", "랏번호", "디바이스")

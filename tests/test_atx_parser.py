@@ -82,3 +82,9 @@ def test_parse_atx_wip_sheet_disambiguates_duplicate_keys_by_occurrence():
     assert parsed.lots[base + (0,)][17] == 22.98   # Wire_Bond
     assert parsed.lots[base + (1,)][17] == 28.61
     assert parsed.lots[base + (2,)][17] == 34.48
+
+
+def test_parse_atx_wip_sheet_populates_key_labels():
+    parsed = parse_atx_wip_sheet(FIXTURE_260723)
+
+    assert parsed.key_labels == ("웨이퍼랏", "디바이스", "컨트롤랏")

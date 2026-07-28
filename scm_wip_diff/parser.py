@@ -53,6 +53,7 @@ class ParsedWip:
     rows: dict
     sheet_name: str = ""
     value_number_format: str = "#,##0"
+    key_labels: tuple = ("MO", "랏번호", "디바이스")
 
 
 def parse_wip_sheet(path):
@@ -96,4 +97,5 @@ def parse_wip_sheet(path):
         rows=rows,
         sheet_name=ws.title,
         value_number_format="#,##0",
+        key_labels=("MO", "랏번호", "디바이스"),
     )

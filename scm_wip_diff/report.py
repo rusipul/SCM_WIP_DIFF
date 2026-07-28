@@ -55,7 +55,9 @@ def _apply_readability_formatting(ws, number_format_columns, number_format):
             ws.cell(row=row, column=col).number_format = number_format
 
 
-def build_variance_report(stage_summary, lot_diff, output_path, column_labels, value_number_format):
+def build_variance_report(
+    stage_summary, lot_diff, output_path, column_labels, value_number_format, key_labels
+):
     wb = openpyxl.Workbook()
 
     summary_ws = wb.active
@@ -72,7 +74,7 @@ def build_variance_report(stage_summary, lot_diff, output_path, column_labels, v
     _apply_readability_formatting(summary_ws, number_format_columns=[2, 3, 4], number_format=value_number_format)
 
     changed_ws = wb.create_sheet("변동랏")
-    changed_ws.append(["MO", "랏번호", "디바이스", "변경컬럼", "어제값", "오늘값"])
+    changed_ws.append(list(key_labels) + ["변경컬럼", "어제값", "오늘값"])
     for lot in lot_diff["changed_lots"]:
         mo, lot_no, device, _ = lot["key"]
         for change in lot["changes"]:
@@ -84,7 +86,7 @@ def build_variance_report(stage_summary, lot_diff, output_path, column_labels, v
     process_number_format_columns = list(range(4, 4 + len(process_headers)))
 
     new_ws = wb.create_sheet("신규랏")
-    new_ws.append(["MO", "랏번호", "디바이스"] + process_headers)
+    new_ws.append(list(key_labels) + process_headers)
     for lot in lot_diff["new_lots"]:
         mo, lot_no, device, _ = lot["key"]
         values = lot["values"]
@@ -92,7 +94,7 @@ def build_variance_report(stage_summary, lot_diff, output_path, column_labels, v
     _apply_readability_formatting(new_ws, number_format_columns=process_number_format_columns, number_format=value_number_format)
 
     removed_ws = wb.create_sheet("삭제랏")
-    removed_ws.append(["MO", "랏번호", "디바이스"] + process_headers)
+    removed_ws.append(list(key_labels) + process_headers)
     for lot in lot_diff["removed_lots"]:
         mo, lot_no, device, _ = lot["key"]
         values = lot["values"]

@@ -80,7 +80,12 @@ class App:
 
             try:
                 build_variance_report(
-                    stage_summary, lot_diff, report_path, today.column_labels, today.value_number_format
+                    stage_summary,
+                    lot_diff,
+                    report_path,
+                    today.column_labels,
+                    today.value_number_format,
+                    today.key_labels,
                 )
             except PermissionError:
                 messagebox.showerror(

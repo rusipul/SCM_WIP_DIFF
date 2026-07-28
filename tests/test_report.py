@@ -91,7 +91,9 @@ LOT_DIFF = {
 def test_build_variance_report_writes_expected_sheets(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
-    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0")
+    build_variance_report(
+        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스")
+    )
 
     wb = openpyxl.load_workbook(str(output_path))
     assert wb.sheetnames == ["요약", "변동랏", "신규랏", "삭제랏"]
@@ -135,7 +137,9 @@ def test_build_variance_report_writes_expected_sheets(tmp_path):
 def test_build_variance_report_applies_readability_formatting(tmp_path):
     output_path = tmp_path / "report.xlsx"
 
-    build_variance_report(STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0")
+    build_variance_report(
+        STAGE_SUMMARY, LOT_DIFF, str(output_path), COLUMN_LABELS, "#,##0", ("MO", "랏번호", "디바이스")
+    )
 
     wb = openpyxl.load_workbook(str(output_path))
 
@@ -161,6 +165,36 @@ def test_build_variance_report_applies_readability_formatting(tmp_path):
 
     removed_ws = wb["삭제랏"]
     assert removed_ws["D2"].number_format == "#,##0"
+
+
+def test_build_variance_report_uses_atx_key_labels_not_gtk_hardcoded_headers(tmp_path):
+    output_path = tmp_path / "report.xlsx"
+
+    build_variance_report(
+        STAGE_SUMMARY,
+        LOT_DIFF,
+        str(output_path),
+        COLUMN_LABELS,
+        "#,##0",
+        ("웨이퍼랏", "디바이스", "컨트롤랏"),
+    )
+
+    wb = openpyxl.load_workbook(str(output_path))
+
+    changed_ws = wb["변동랏"]
+    assert changed_ws["A1"].value == "웨이퍼랏"
+    assert changed_ws["B1"].value == "디바이스"
+    assert changed_ws["C1"].value == "컨트롤랏"
+
+    new_ws = wb["신규랏"]
+    assert new_ws["A1"].value == "웨이퍼랏"
+    assert new_ws["B1"].value == "디바이스"
+    assert new_ws["C1"].value == "컨트롤랏"
+
+    removed_ws = wb["삭제랏"]
+    assert removed_ws["A1"].value == "웨이퍼랏"
+    assert removed_ws["B1"].value == "디바이스"
+    assert removed_ws["C1"].value == "컨트롤랏"
 
 
 def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):
@@ -238,11 +272,28 @@ def test_atx_end_to_end_report_and_highlight(tmp_path):
 
     report_path = tmp_path / "report.xlsx"
     build_variance_report(
-        stage_summary, lot_diff, str(report_path), today.column_labels, today.value_number_format
+        stage_summary,
+        lot_diff,
+        str(report_path),
+        today.column_labels,
+        today.value_number_format,
+        today.key_labels,
     )
     report_wb = openpyxl.load_workbook(str(report_path))
     assert report_wb["요약"]["A2"].value == "전공정"
     assert report_wb["변동랏"]["E2"].number_format == "#,##0.00"
+    assert report_wb["변동랏"]["A1"].value == "웨이퍼랏"
+    assert report_wb["변동랏"]["B1"].value == "디바이스"
+    assert report_wb["변동랏"]["C1"].value == "컨트롤랏"
+    assert report_wb["신규랏"]["A1"].value == "웨이퍼랏"
+    assert report_wb["신규랏"]["B1"].value == "디바이스"
+    assert report_wb["신규랏"]["C1"].value == "컨트롤랏"
+    # Rows are written in lot_diff["new_lots"] order, so row 2 corresponds to
+    # the first new lot: confirm WAFERLOT/DEVICE/CONTROLLOT values land under
+    # their correctly-labeled columns (A=웨이퍼랏, B=디바이스, C=컨트롤랏).
+    first_new_key = lot_diff["new_lots"][0]["key"]
+    new_ws = report_wb["신규랏"]
+    assert (new_ws["A2"].value, new_ws["B2"].value, new_ws["C2"].value) == first_new_key[:3]
 
     today_copy = tmp_path / "260724 ATX WIP.xlsx"
     shutil.copyfile(FIXTURE_260724_ATX, today_copy)
