@@ -41,6 +41,19 @@ def test_derive_output_paths_falls_back_when_pattern_does_not_match():
     assert highlighted_path == os.path.join("C:", os.sep, "data", "random_file_변동표시.xlsx")
 
 
+def test_derive_output_paths_falls_back_when_no_company_token_present():
+    # Known accepted trade-off: a date+WIP filename with no company token in
+    # between (no real GTK/ATX file looks like this) doesn't match the
+    # date+company+WIP regex, so it falls through to the generic fallback,
+    # producing a cosmetically odd but harmless "WIP_WIP" filename.
+    today_path = os.path.join("C:", os.sep, "data", "260723 WIP.xlsx")
+
+    report_path, highlighted_path = derive_output_paths(today_path)
+
+    assert report_path == os.path.join("C:", os.sep, "data", "260723 WIP_WIP_변동리포트.xlsx")
+    assert highlighted_path == os.path.join("C:", os.sep, "data", "260723 WIP_변동표시.xlsx")
+
+
 STAGE_SUMMARY = {
     "전공정": {"yesterday": 100, "today": 50, "delta": -50},
     "후공정": {"yesterday": 10, "today": 110, "delta": 100},
