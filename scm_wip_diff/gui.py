@@ -100,17 +100,7 @@ class App:
             s = stage_summary[stage]
             lines.append(f"{stage}: {s['yesterday']:,} -> {s['today']:,} ({s['delta']:+,})")
         lines.append("")
-        lines.append(
-            f"변경된 랏: {len(lot_diff['changed_lots'])}건 / "
-            f"신규: {len(lot_diff['new_lots'])}건 / "
-            f"삭제: {len(lot_diff['removed_lots'])}건"
-        )
-        lines.append("")
-        lines.append("[변경 상세]")
-        for lot in lot_diff["changed_lots"]:
-            _, lot_no, device, _ = lot["key"]
-            changes_str = ", ".join(
-                f"{c['label']} {c['before']:,}->{c['after']:,}" for c in lot["changes"]
-            )
-            lines.append(f"{lot_no}/{device}: {changes_str}")
+        lines.append(f"변경된 랏 수: {len(lot_diff['changed_lots'])}")
+        lines.append(f"신규 랏 수: {len(lot_diff['new_lots'])}")
+        lines.append(f"삭제된 랏 수: {len(lot_diff['removed_lots'])}")
         self.result_text.insert("1.0", "\n".join(lines))
