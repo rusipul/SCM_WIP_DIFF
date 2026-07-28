@@ -1,6 +1,7 @@
 from scm_wip_diff.parser import ParsedWip, parse_wip_sheet
 from scm_wip_diff.comparator import compare_stage_summary
 from scm_wip_diff.comparator import compare_lots
+from scm_wip_diff.comparator import check_lot_overlap
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -95,3 +96,27 @@ def test_compare_lots_matches_real_fixture_counts():
         {"col": 9, "label": "Saw(I)", "before": 347638, "after": 0},
         {"col": 10, "label": "Die Mount(J)", "before": 316800, "after": 664438},
     ]
+
+
+def test_check_lot_overlap_returns_none_when_files_mostly_match():
+    yesterday = make_parsed({(f"m{i}", f"l{i}", "d", 0): {9: 0, 12: 0, 29: 0} for i in range(10)})
+    today = make_parsed({(f"m{i}", f"l{i}", "d", 0): {9: 0, 12: 0, 29: 0} for i in range(9)})
+
+    assert check_lot_overlap(yesterday, today) is None
+
+
+def test_check_lot_overlap_warns_when_files_mostly_differ():
+    yesterday = make_parsed({(f"m{i}", f"l{i}", "d", 0): {9: 0, 12: 0, 29: 0} for i in range(10)})
+    today = make_parsed({(f"n{i}", f"k{i}", "d", 0): {9: 0, 12: 0, 29: 0} for i in range(10)})
+
+    warning = check_lot_overlap(yesterday, today)
+
+    assert warning is not None
+    assert "겹치는 랏이 적습니다" in warning
+
+
+def test_check_lot_overlap_matches_real_fixtures_without_warning():
+    yesterday = parse_wip_sheet(FIXTURE_260721)
+    today = parse_wip_sheet(FIXTURE_260722)
+
+    assert check_lot_overlap(yesterday, today) is None

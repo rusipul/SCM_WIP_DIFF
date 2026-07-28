@@ -57,3 +57,22 @@ def compare_lots(yesterday, today):
         "new_lots": new_lots,
         "removed_lots": removed_lots,
     }
+
+
+OVERLAP_WARNING_THRESHOLD = 0.5
+
+
+def check_lot_overlap(yesterday, today):
+    y_keys = set(yesterday.lots.keys())
+    t_keys = set(today.lots.keys())
+    if not y_keys or not t_keys:
+        return None
+
+    overlap = len(y_keys & t_keys)
+    ratio = overlap / min(len(y_keys), len(t_keys))
+    if ratio < OVERLAP_WARNING_THRESHOLD:
+        return (
+            f"어제/오늘 파일 간 겹치는 랏이 적습니다 ({ratio:.0%}). "
+            "잘못된 파일을 선택하지 않았는지 확인하세요."
+        )
+    return None
