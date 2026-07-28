@@ -2,8 +2,6 @@
 
 from openpyxl.utils import get_column_letter
 
-from scm_wip_diff.parser import PROCESS_COL_START, PROCESS_COL_END
-
 STAGE_ORDER = ["전공정", "후공정", "완료"]
 
 
@@ -22,17 +20,24 @@ def compare_stage_summary(yesterday, today):
     return summary
 
 
+def _process_columns(yesterday, today):
+    y_cols = {c for cols in yesterday.stage_groups.values() for c in cols}
+    t_cols = {c for cols in today.stage_groups.values() for c in cols}
+    return sorted(y_cols | t_cols)
+
+
 def compare_lots(yesterday, today):
     y_keys = set(yesterday.lots.keys())
     t_keys = set(today.lots.keys())
     common_keys = y_keys & t_keys
+    process_cols = _process_columns(yesterday, today)
 
     changed_lots = []
     for key in sorted(common_keys, key=lambda k: today.rows[k]):
         y_vals = yesterday.lots[key]
         t_vals = today.lots[key]
         changes = []
-        for col in range(PROCESS_COL_START, PROCESS_COL_END + 1):
+        for col in process_cols:
             before = y_vals.get(col, 0)
             after = t_vals.get(col, 0)
             if before != after:
@@ -58,6 +63,7 @@ def compare_lots(yesterday, today):
         "changed_lots": changed_lots,
         "new_lots": new_lots,
         "removed_lots": removed_lots,
+        "process_columns": process_cols,
     }
 
 

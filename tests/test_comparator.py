@@ -78,12 +78,48 @@ def test_compare_lots_detects_new_and_removed_keys():
     assert diff["removed_lots"][0]["values"] == yesterday.lots[("m1", "l1", "d1", 0)]
 
 
+def test_compare_lots_returns_process_columns_from_stage_group_union():
+    yesterday = make_parsed({("m1", "l1", "d1", 0): {9: 0, 12: 0, 29: 0}})
+    today = make_parsed({("m1", "l1", "d1", 0): {9: 0, 12: 0, 29: 0}})
+
+    diff = compare_lots(yesterday, today)
+
+    assert diff["process_columns"] == [9, 12, 29]
+
+
+def test_compare_lots_handles_noncontiguous_process_columns():
+    stage_groups = {"전공정": [13, 14], "후공정": [20, 21]}  # 15~19는 그룹에 없는 소계 컬럼 흉내
+    column_labels = {13: "A", 14: "B", 20: "C", 21: "D"}
+    yesterday = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {13: 1.0, 14: 2.0, 20: 3.0, 21: 4.0}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+    today = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {13: 0.0, 14: 2.0, 20: 3.0, 21: 5.0}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+
+    diff = compare_lots(yesterday, today)
+
+    assert diff["process_columns"] == [13, 14, 20, 21]
+    assert len(diff["changed_lots"]) == 1
+    assert diff["changed_lots"][0]["changes"] == [
+        {"col": 13, "label": "A(M)", "before": 1.0, "after": 0.0},
+        {"col": 21, "label": "D(U)", "before": 4.0, "after": 5.0},
+    ]
+
+
 def test_compare_lots_matches_real_fixture_counts():
     yesterday = parse_wip_sheet(FIXTURE_260721)
     today = parse_wip_sheet(FIXTURE_260722)
 
     diff = compare_lots(yesterday, today)
 
+    assert diff["process_columns"] == list(range(9, 31))
     assert len(diff["changed_lots"]) == 19
     assert len(diff["new_lots"]) == 1
     assert len(diff["removed_lots"]) == 2
