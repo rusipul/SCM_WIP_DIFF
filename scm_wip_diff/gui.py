@@ -1,9 +1,10 @@
-"""tkinter GUI wiring parser -> comparator -> report together."""
+"""tkinter GUI wiring format detection -> comparator -> report together."""
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from scm_wip_diff.comparator import check_lot_overlap, compare_lots, compare_stage_summary
-from scm_wip_diff.parser import ReportFormatError, parse_wip_sheet
+from scm_wip_diff.format_detect import parse_wip_file
+from scm_wip_diff.parser import ReportFormatError
 from scm_wip_diff.report import (
     build_highlighted_today_file,
     build_variance_report,
@@ -49,15 +50,23 @@ class App:
 
         try:
             try:
-                yesterday = parse_wip_sheet(y_path)
+                y_format, yesterday = parse_wip_file(y_path)
             except ReportFormatError as e:
                 messagebox.showerror("파일 형식 오류", f"어제 파일 오류 ({y_path}):\n{e}")
                 return
 
             try:
-                today = parse_wip_sheet(t_path)
+                t_format, today = parse_wip_file(t_path)
             except ReportFormatError as e:
                 messagebox.showerror("파일 형식 오류", f"오늘 파일 오류 ({t_path}):\n{e}")
+                return
+
+            if y_format != t_format:
+                messagebox.showerror(
+                    "형식 불일치",
+                    f"어제 파일은 {y_format} 형식, 오늘 파일은 {t_format} 형식입니다.\n"
+                    "같은 회사 파일끼리 비교해주세요.",
+                )
                 return
 
             overlap_warning = check_lot_overlap(yesterday, today)
@@ -70,7 +79,9 @@ class App:
             report_path, highlighted_path = derive_output_paths(t_path)
 
             try:
-                build_variance_report(stage_summary, lot_diff, report_path, today.column_labels)
+                build_variance_report(
+                    stage_summary, lot_diff, report_path, today.column_labels, today.value_number_format
+                )
             except PermissionError:
                 messagebox.showerror(
                     "저장 실패",
@@ -79,7 +90,7 @@ class App:
                 return
 
             try:
-                build_highlighted_today_file(t_path, lot_diff, highlighted_path)
+                build_highlighted_today_file(t_path, lot_diff, highlighted_path, today.sheet_name)
             except PermissionError:
                 messagebox.showerror(
                     "저장 실패",
@@ -96,7 +107,7 @@ class App:
     def _show_preview(self, stage_summary, lot_diff):
         self.result_text.delete("1.0", tk.END)
         lines = ["[단계별 합계]"]
-        for stage in ("전공정", "후공정", "완료"):
+        for stage in stage_summary:
             s = stage_summary[stage]
             lines.append(f"{stage}: {s['yesterday']:,} -> {s['today']:,} ({s['delta']:+,})")
         lines.append("")
