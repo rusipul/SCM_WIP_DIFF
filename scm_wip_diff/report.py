@@ -5,6 +5,7 @@ import shutil
 
 import openpyxl
 from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
 
 RED_FILL = PatternFill(fill_type="solid", fgColor="FFFF0000")
 NEW_LOT_FILL = PatternFill(fill_type="solid", fgColor="FFADD8E6")
@@ -23,7 +24,14 @@ def derive_output_paths(today_path):
     return report_path, highlighted_path
 
 
-def build_variance_report(stage_summary, lot_diff, output_path):
+PROCESS_COLS = range(9, 31)
+
+
+def _process_column_headers(column_labels):
+    return [f"{column_labels.get(col, '')}({get_column_letter(col)})" for col in PROCESS_COLS]
+
+
+def build_variance_report(stage_summary, lot_diff, output_path, column_labels):
     wb = openpyxl.Workbook()
 
     summary_ws = wb.active
@@ -45,16 +53,20 @@ def build_variance_report(stage_summary, lot_diff, output_path):
         for change in lot["changes"]:
             changed_ws.append([mo, lot_no, device, change["label"], change["before"], change["after"]])
 
+    process_headers = _process_column_headers(column_labels)
+
     new_ws = wb.create_sheet("신규랏")
-    new_ws.append(["MO", "랏번호", "디바이스"])
+    new_ws.append(["MO", "랏번호", "디바이스"] + process_headers)
     for lot in lot_diff["new_lots"]:
         mo, lot_no, device, _ = lot["key"]
-        new_ws.append([mo, lot_no, device])
+        values = lot["values"]
+        new_ws.append([mo, lot_no, device] + [values.get(col, 0) for col in PROCESS_COLS])
 
     removed_ws = wb.create_sheet("삭제랏")
-    removed_ws.append(["MO", "랏번호", "디바이스"])
+    removed_ws.append(["MO", "랏번호", "디바이스"] + process_headers)
     for lot in lot_diff["removed_lots"]:
         mo, lot_no, device, _ = lot["key"]
-        removed_ws.append([mo, lot_no, device])
+        values = lot["values"]
+        removed_ws.append([mo, lot_no, device] + [values.get(col, 0) for col in PROCESS_COLS])
 
     wb.save(output_path)

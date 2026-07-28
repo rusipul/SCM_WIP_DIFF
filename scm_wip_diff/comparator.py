@@ -44,11 +44,11 @@ def compare_lots(yesterday, today):
             })
 
     new_lots = [
-        {"key": key, "row_in_today": today.rows[key]}
+        {"key": key, "row_in_today": today.rows[key], "values": today.lots[key]}
         for key in sorted(t_keys - y_keys, key=lambda k: today.rows[k])
     ]
     removed_lots = [
-        {"key": key, "row_in_yesterday": yesterday.rows[key]}
+        {"key": key, "row_in_yesterday": yesterday.rows[key], "values": yesterday.lots[key]}
         for key in sorted(y_keys - t_keys, key=lambda k: yesterday.rows[k])
     ]
 
