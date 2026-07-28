@@ -149,7 +149,7 @@ def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_
     }
 
     output_path = tmp_path / "260722 GTK WIP_변동표시.xlsx"
-    build_highlighted_today_file(str(today_copy), lot_diff, str(output_path))
+    build_highlighted_today_file(str(today_copy), lot_diff, str(output_path), "gtk3387")
 
     assert _file_hash(today_copy) == original_hash
 

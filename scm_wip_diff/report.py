@@ -98,10 +98,10 @@ def build_variance_report(stage_summary, lot_diff, output_path, column_labels, v
     wb.save(output_path)
 
 
-def build_highlighted_today_file(today_path, lot_diff, output_path):
+def build_highlighted_today_file(today_path, lot_diff, output_path, sheet_name):
     shutil.copyfile(today_path, output_path)
     wb = openpyxl.load_workbook(output_path)
-    ws = wb[wb.sheetnames[0]]
+    ws = wb[sheet_name]
 
     for lot in lot_diff["changed_lots"]:
         row = lot["row_in_today"]
