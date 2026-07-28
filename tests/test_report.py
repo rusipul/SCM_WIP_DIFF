@@ -4,9 +4,13 @@ import shutil
 
 import openpyxl
 
+from scm_wip_diff.atx_parser import parse_atx_wip_sheet
+from scm_wip_diff.comparator import compare_lots, compare_stage_summary
 from scm_wip_diff.report import build_highlighted_today_file, build_variance_report, derive_output_paths
 
 FIXTURE_260722_PATH = "tests/fixtures/260722 GTK WIP.xlsx"
+FIXTURE_260723_ATX = "tests/fixtures/260723 ATX WIP.xlsx"
+FIXTURE_260724_ATX = "tests/fixtures/260724 ATX WIP.xlsx"
 
 
 def _file_hash(path):
@@ -218,3 +222,38 @@ def test_build_highlighted_today_file_uses_sheet_name_not_first_sheet(tmp_path):
     assert result_wb.sheetnames[0] == "OtherSheet"
     assert result_wb["TargetSheet"].cell(row=1, column=1).fill.fgColor.rgb == "FFFF0000"
     assert result_wb["OtherSheet"].cell(row=1, column=1).fill.fgColor.rgb != "FFFF0000"
+
+
+def test_atx_end_to_end_report_and_highlight(tmp_path):
+    yesterday = parse_atx_wip_sheet(FIXTURE_260723_ATX)
+    today = parse_atx_wip_sheet(FIXTURE_260724_ATX)
+
+    stage_summary = compare_stage_summary(yesterday, today)
+    lot_diff = compare_lots(yesterday, today)
+
+    assert set(stage_summary.keys()) == {"전공정", "후공정"}
+    assert len(lot_diff["changed_lots"]) == 81
+    assert len(lot_diff["new_lots"]) == 25
+    assert len(lot_diff["removed_lots"]) == 9
+
+    report_path = tmp_path / "report.xlsx"
+    build_variance_report(
+        stage_summary, lot_diff, str(report_path), today.column_labels, today.value_number_format
+    )
+    report_wb = openpyxl.load_workbook(str(report_path))
+    assert report_wb["요약"]["A2"].value == "전공정"
+    assert report_wb["변동랏"]["E2"].number_format == "#,##0.00"
+
+    today_copy = tmp_path / "260724 ATX WIP.xlsx"
+    shutil.copyfile(FIXTURE_260724_ATX, today_copy)
+    highlighted_path = tmp_path / "260724 ATX WIP_변동표시.xlsx"
+    build_highlighted_today_file(str(today_copy), lot_diff, str(highlighted_path), today.sheet_name)
+
+    highlighted_wb = openpyxl.load_workbook(str(highlighted_path))
+    ws = highlighted_wb[today.sheet_name]
+    first_changed = next(
+        lot for lot in lot_diff["changed_lots"]
+        if lot["key"] == ("BQ8886001A", "GTMP122007", "TPSJ26N009", 0)
+    )
+    changed_col = first_changed["changes"][0]["col"]
+    assert ws.cell(row=first_changed["row_in_today"], column=changed_col).fill.fgColor.rgb == "FFFF0000"
