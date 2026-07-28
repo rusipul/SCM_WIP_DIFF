@@ -15,3 +15,13 @@ def find_report_anchor(ws, title=REPORT_TITLE):
             if cell.value and title in str(cell.value):
                 return cell.row
     raise ReportFormatError(f"'{title}' 표를 찾을 수 없습니다")
+
+
+def get_stage_groups(ws, anchor_row):
+    group_row = anchor_row + 1
+    groups = {}
+    for merged in ws.merged_cells.ranges:
+        if merged.min_row == group_row:
+            label = str(ws.cell(row=group_row, column=merged.min_col).value).strip()
+            groups[label] = list(range(merged.min_col, merged.max_col + 1))
+    return groups
