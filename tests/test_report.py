@@ -1,8 +1,17 @@
+import hashlib
 import os
+import shutil
 
 import openpyxl
 
-from scm_wip_diff.report import build_variance_report, derive_output_paths
+from scm_wip_diff.report import build_highlighted_today_file, build_variance_report, derive_output_paths
+
+FIXTURE_260722_PATH = "tests/fixtures/260722 GTK WIP.xlsx"
+
+
+def _file_hash(path):
+    with open(path, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
 
 
 def test_derive_output_paths_uses_date_prefix_and_same_folder():
@@ -85,3 +94,37 @@ def test_build_variance_report_writes_expected_sheets(tmp_path):
     assert removed_ws["B2"].value == "l3"
     assert removed_ws["D2"].value == 789
     assert removed_ws["E2"].value == 0
+
+
+def test_build_highlighted_today_file_marks_cells_without_touching_original(tmp_path):
+    today_copy = tmp_path / "260722 GTK WIP.xlsx"
+    shutil.copyfile(FIXTURE_260722_PATH, today_copy)
+    original_hash = _file_hash(today_copy)
+
+    lot_diff = {
+        "changed_lots": [
+            {
+                "key": ("TNT0896622324", "1B3C75", "TMP1202D", 0),
+                "row_in_today": 21,
+                "changes": [
+                    {"col": 9, "label": "Saw(I)", "before": 347638, "after": 0},
+                    {"col": 10, "label": "Die Mount(J)", "before": 316800, "after": 664438},
+                ],
+            },
+        ],
+        "new_lots": [{"key": ("MNS08M6622326", "1B3C76", "TMP1230", 0), "row_in_today": 22}],
+        "removed_lots": [],
+    }
+
+    output_path = tmp_path / "260722 GTK WIP_변동표시.xlsx"
+    build_highlighted_today_file(str(today_copy), lot_diff, str(output_path))
+
+    assert _file_hash(today_copy) == original_hash
+
+    wb = openpyxl.load_workbook(str(output_path))
+    ws = wb[wb.sheetnames[0]]
+    assert ws.cell(row=21, column=9).fill.fgColor.rgb == "FFFF0000"
+    assert ws.cell(row=21, column=10).fill.fgColor.rgb == "FFFF0000"
+    assert ws.cell(row=21, column=1).fill.fgColor.rgb != "FFFF0000"
+    assert ws.cell(row=22, column=1).fill.fgColor.rgb == "FFADD8E6"
+    assert ws.cell(row=22, column=38).fill.fgColor.rgb == "FFADD8E6"

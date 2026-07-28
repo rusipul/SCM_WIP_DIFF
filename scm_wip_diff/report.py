@@ -70,3 +70,21 @@ def build_variance_report(stage_summary, lot_diff, output_path, column_labels):
         removed_ws.append([mo, lot_no, device] + [values.get(col, 0) for col in PROCESS_COLS])
 
     wb.save(output_path)
+
+
+def build_highlighted_today_file(today_path, lot_diff, output_path):
+    shutil.copyfile(today_path, output_path)
+    wb = openpyxl.load_workbook(output_path)
+    ws = wb[wb.sheetnames[0]]
+
+    for lot in lot_diff["changed_lots"]:
+        row = lot["row_in_today"]
+        for change in lot["changes"]:
+            ws.cell(row=row, column=change["col"]).fill = RED_FILL
+
+    for lot in lot_diff["new_lots"]:
+        row = lot["row_in_today"]
+        for col in range(1, ws.max_column + 1):
+            ws.cell(row=row, column=col).fill = NEW_LOT_FILL
+
+    wb.save(output_path)
