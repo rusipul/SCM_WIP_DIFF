@@ -3,6 +3,7 @@ import pytest
 
 from scm_wip_diff.parser import find_report_anchor, get_stage_groups, ReportFormatError
 from scm_wip_diff.parser import build_column_labels
+from scm_wip_diff.parser import parse_wip_sheet
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
@@ -50,3 +51,29 @@ def test_build_column_labels_combines_two_header_rows():
     assert labels[21] == "Ball Mount"
     assert labels[29] == "TR Stock"
     assert labels[30] == "Non TR Stock"
+
+
+def test_parse_wip_sheet_reads_all_lot_rows_and_stops_before_next_report():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+
+    assert len(parsed.lots) == 174
+
+
+def test_parse_wip_sheet_extracts_process_values_for_first_data_row():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+    key = ("SNF08N5623340E", "1B4686", "TMP1200D", 0)
+
+    assert parsed.rows[key] == 7
+    assert parsed.lots[key][9] == 0     # Saw
+    assert parsed.lots[key][29] == 0    # TR Stock
+    assert parsed.lots[key][30] == 24627  # Non TR Stock
+
+
+def test_parse_wip_sheet_disambiguates_duplicate_keys_by_occurrence():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+
+    first_key = ("", "1B468601", "TMP1201D", 0)
+    second_key = ("", "1B468601", "TMP1201D", 1)
+
+    assert parsed.rows[first_key] == 18
+    assert parsed.rows[second_key] == 19

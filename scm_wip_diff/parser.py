@@ -1,5 +1,9 @@
 """Parse GTK WIP Excel reports into structured lot-level data."""
 
+from dataclasses import dataclass
+
+import openpyxl
+
 REPORT_TITLE = "Report for Assy or Turn-key WIP"
 PROCESS_COL_START = 9   # I
 PROCESS_COL_END = 30    # AD
@@ -38,3 +42,45 @@ def build_column_labels(ws, anchor_row):
         v2 = str(v2).strip() if v2 else ""
         labels[col] = f"{v1} {v2}".strip() if v1 else v2
     return labels
+
+
+@dataclass
+class ParsedWip:
+    column_labels: dict
+    stage_groups: dict
+    lots: dict
+    rows: dict
+
+
+def parse_wip_sheet(path):
+    wb = openpyxl.load_workbook(path, data_only=True)
+    ws = wb[wb.sheetnames[0]]
+
+    anchor = find_report_anchor(ws)
+    groups = get_stage_groups(ws, anchor)
+    labels = build_column_labels(ws, anchor)
+    data_start = anchor + 5
+
+    lots = {}
+    rows = {}
+    occurrence = {}
+    r = data_start
+    while ws.cell(row=r, column=2).value is not None:
+        a = str(ws.cell(row=r, column=1).value or "").strip()
+        b = str(ws.cell(row=r, column=2).value or "").strip()
+        c = str(ws.cell(row=r, column=3).value or "").strip()
+        base_key = (a, b, c)
+        idx = occurrence.get(base_key, 0)
+        occurrence[base_key] = idx + 1
+        key = (a, b, c, idx)
+
+        values = {}
+        for col in range(PROCESS_COL_START, PROCESS_COL_END + 1):
+            v = ws.cell(row=r, column=col).value
+            values[col] = int(v) if isinstance(v, (int, float)) else 0
+
+        lots[key] = values
+        rows[key] = r
+        r += 1
+
+    return ParsedWip(column_labels=labels, stage_groups=groups, lots=lots, rows=rows)
