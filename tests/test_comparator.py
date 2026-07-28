@@ -1,10 +1,16 @@
+import pytest
+
 from scm_wip_diff.parser import ParsedWip, parse_wip_sheet
+from scm_wip_diff.atx_parser import parse_atx_wip_sheet
 from scm_wip_diff.comparator import compare_stage_summary
+from scm_wip_diff.comparator import compare_stage_summary_by_device
 from scm_wip_diff.comparator import compare_lots
 from scm_wip_diff.comparator import check_lot_overlap
 
 FIXTURE_260721 = "tests/fixtures/260721 GTK WIP.xlsx"
 FIXTURE_260722 = "tests/fixtures/260722 GTK WIP.xlsx"
+FIXTURE_260723_ATX = "tests/fixtures/260723 ATX WIP.xlsx"
+FIXTURE_260724_ATX = "tests/fixtures/260724 ATX WIP.xlsx"
 
 
 def make_parsed(lots):
@@ -231,3 +237,82 @@ def test_check_lot_overlap_matches_real_fixtures_without_warning():
     today = parse_wip_sheet(FIXTURE_260722)
 
     assert check_lot_overlap(yesterday, today) is None
+
+
+def test_compare_stage_summary_by_device_aggregates_and_sorts_by_device_name():
+    yesterday = make_parsed({
+        ("m1", "l1", "deviceB", 0): {9: 100, 12: 0, 29: 0},
+        ("m2", "l2", "deviceA", 0): {9: 50, 12: 10, 29: 0},
+        ("m3", "l3", "deviceA", 0): {9: 20, 12: 0, 29: 0},
+    })
+    today = make_parsed({
+        ("m1", "l1", "deviceB", 0): {9: 0, 12: 100, 29: 0},
+        ("m2", "l2", "deviceA", 0): {9: 50, 12: 10, 29: 0},
+        ("m4", "l4", "deviceC", 0): {9: 0, 12: 0, 29: 5},
+    })
+
+    summary = compare_stage_summary_by_device(yesterday, today)
+
+    assert list(summary.keys()) == ["deviceA", "deviceB", "deviceC"]
+    assert summary["deviceA"]["전공정"] == {"yesterday": 70, "today": 50, "delta": -20}
+    assert summary["deviceB"]["전공정"] == {"yesterday": 100, "today": 0, "delta": -100}
+    assert summary["deviceB"]["후공정"] == {"yesterday": 0, "today": 100, "delta": 100}
+    # deviceC only exists today (removed lot m3/deviceA is gone from today,
+    # new lot m4/deviceC only in today) -> deviceC yesterday side is all 0
+    assert summary["deviceC"]["완료"] == {"yesterday": 0, "today": 5, "delta": 5}
+    assert summary["deviceC"]["전공정"] == {"yesterday": 0, "today": 0, "delta": 0}
+
+
+def test_compare_stage_summary_by_device_omits_stages_not_present():
+    stage_groups = {"전공정": [9], "후공정": [12]}  # "완료" 없음
+    column_labels = {9: "Saw", 12: "Mold"}
+    yesterday = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {9: 10, 12: 5}},
+        rows={("m1", "l1", "d1", 0): 1},
+        device_key_index=2,
+    )
+    today = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {9: 5, 12: 10}},
+        rows={("m1", "l1", "d1", 0): 1},
+        device_key_index=2,
+    )
+
+    summary = compare_stage_summary_by_device(yesterday, today)
+
+    assert set(summary["d1"].keys()) == {"전공정", "후공정"}
+
+
+def test_compare_stage_summary_by_device_matches_real_gtk_fixture():
+    yesterday = parse_wip_sheet(FIXTURE_260721)
+    today = parse_wip_sheet(FIXTURE_260722)
+
+    summary = compare_stage_summary_by_device(yesterday, today)
+
+    assert len(summary) == 34
+    assert list(summary.keys())[0] == "TMP1200D"
+    assert summary["TMP1200D"]["전공정"] == {"yesterday": 666004, "today": 666004, "delta": 0}
+    assert summary["TMP1200D"]["후공정"] == {"yesterday": 339484, "today": 107484, "delta": -232000}
+    assert summary["TMP1200D"]["완료"] == {"yesterday": 556627, "today": 788627, "delta": 232000}
+
+
+def test_compare_stage_summary_by_device_matches_real_atx_fixture():
+    yesterday = parse_atx_wip_sheet(FIXTURE_260723_ATX)
+    today = parse_atx_wip_sheet(FIXTURE_260724_ATX)
+
+    summary = compare_stage_summary_by_device(yesterday, today)
+
+    assert len(summary) == 11
+    assert list(summary.keys())[0] == "GTMP122007"
+    assert summary["GTMP122007"]["전공정"]["yesterday"] == pytest.approx(1119.27, abs=0.01)
+    assert summary["GTMP122007"]["전공정"]["today"] == pytest.approx(1020.23, abs=0.01)
+    assert summary["GTMP122007"]["전공정"]["delta"] == pytest.approx(-99.04, abs=0.01)
+    assert summary["GTMP122007"]["후공정"] == {
+        "yesterday": pytest.approx(516.65, abs=0.01),
+        "today": pytest.approx(615.28, abs=0.01),
+        "delta": pytest.approx(98.63, abs=0.01),
+    }
+    assert "완료" not in summary["GTMP122007"]

@@ -88,3 +88,38 @@ def check_lot_overlap(yesterday, today):
             "잘못된 파일을 선택하지 않았는지 확인하세요."
         )
     return None
+
+
+def compare_stage_summary_by_device(yesterday, today):
+    device_idx = yesterday.device_key_index
+    present_stages = [stage for stage in STAGE_ORDER if stage in yesterday.stage_groups]
+
+    y_by_device = {}
+    for key, values in yesterday.lots.items():
+        device = key[device_idx]
+        totals = y_by_device.setdefault(device, {})
+        for stage in present_stages:
+            cols = yesterday.stage_groups.get(stage, [])
+            totals[stage] = totals.get(stage, 0) + sum(values.get(c, 0) for c in cols)
+
+    t_by_device = {}
+    for key, values in today.lots.items():
+        device = key[device_idx]
+        totals = t_by_device.setdefault(device, {})
+        for stage in present_stages:
+            cols = today.stage_groups.get(stage, [])
+            totals[stage] = totals.get(stage, 0) + sum(values.get(c, 0) for c in cols)
+
+    devices = sorted(set(y_by_device) | set(t_by_device))
+    summary = {}
+    for device in devices:
+        summary[device] = {}
+        for stage in present_stages:
+            y_total = y_by_device.get(device, {}).get(stage, 0)
+            t_total = t_by_device.get(device, {}).get(stage, 0)
+            summary[device][stage] = {
+                "yesterday": y_total,
+                "today": t_total,
+                "delta": t_total - y_total,
+            }
+    return summary
