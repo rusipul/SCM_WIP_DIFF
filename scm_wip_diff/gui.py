@@ -48,29 +48,50 @@ class App:
             return
 
         try:
-            yesterday = parse_wip_sheet(y_path)
-            today = parse_wip_sheet(t_path)
-        except ReportFormatError as e:
-            messagebox.showerror("파일 형식 오류", str(e))
-            return
+            try:
+                yesterday = parse_wip_sheet(y_path)
+            except ReportFormatError as e:
+                messagebox.showerror("파일 형식 오류", f"어제 파일 오류 ({y_path}):\n{e}")
+                return
 
-        overlap_warning = check_lot_overlap(yesterday, today)
-        if overlap_warning:
-            messagebox.showwarning("확인 필요", overlap_warning)
+            try:
+                today = parse_wip_sheet(t_path)
+            except ReportFormatError as e:
+                messagebox.showerror("파일 형식 오류", f"오늘 파일 오류 ({t_path}):\n{e}")
+                return
 
-        stage_summary = compare_stage_summary(yesterday, today)
-        lot_diff = compare_lots(yesterday, today)
+            overlap_warning = check_lot_overlap(yesterday, today)
+            if overlap_warning:
+                messagebox.showwarning("확인 필요", overlap_warning)
 
-        report_path, highlighted_path = derive_output_paths(t_path)
-        try:
-            build_variance_report(stage_summary, lot_diff, report_path, today.column_labels)
-            build_highlighted_today_file(t_path, lot_diff, highlighted_path)
-        except PermissionError:
-            messagebox.showerror("저장 실패", "파일이 열려있어 저장할 수 없습니다")
-            return
+            stage_summary = compare_stage_summary(yesterday, today)
+            lot_diff = compare_lots(yesterday, today)
 
-        self._show_preview(stage_summary, lot_diff)
-        messagebox.showinfo("완료", f"저장 완료:\n{report_path}\n{highlighted_path}")
+            report_path, highlighted_path = derive_output_paths(t_path)
+
+            try:
+                build_variance_report(stage_summary, lot_diff, report_path, today.column_labels)
+            except PermissionError:
+                messagebox.showerror(
+                    "저장 실패",
+                    f"변동 리포트 파일이 열려있어 저장할 수 없습니다:\n{report_path}",
+                )
+                return
+
+            try:
+                build_highlighted_today_file(t_path, lot_diff, highlighted_path)
+            except PermissionError:
+                messagebox.showerror(
+                    "저장 실패",
+                    "변동 리포트는 저장되었지만, 하이라이트 파일이 열려있어 저장할 수 없습니다.\n\n"
+                    f"저장됨: {report_path}\n실패: {highlighted_path}",
+                )
+                return
+
+            self._show_preview(stage_summary, lot_diff)
+            messagebox.showinfo("완료", f"저장 완료:\n{report_path}\n{highlighted_path}")
+        except Exception as e:
+            messagebox.showerror("예상치 못한 오류", str(e))
 
     def _show_preview(self, stage_summary, lot_diff):
         self.result_text.delete("1.0", tk.END)
