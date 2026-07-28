@@ -42,6 +42,27 @@ def test_compare_stage_summary_matches_real_fixture_totals():
     assert summary["완료"] == {"yesterday": 2948085, "today": 3130907, "delta": 182822}
 
 
+def test_compare_stage_summary_omits_stages_not_present_in_source_data():
+    stage_groups = {"전공정": [9], "후공정": [12]}  # "완료" 없음
+    column_labels = {9: "Saw", 12: "Mold"}
+    yesterday = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {9: 10, 12: 5}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+    today = ParsedWip(
+        column_labels=column_labels,
+        stage_groups=stage_groups,
+        lots={("m1", "l1", "d1", 0): {9: 5, 12: 10}},
+        rows={("m1", "l1", "d1", 0): 1},
+    )
+
+    summary = compare_stage_summary(yesterday, today)
+
+    assert set(summary.keys()) == {"전공정", "후공정"}
+
+
 def test_compare_lots_detects_changed_columns_in_column_order():
     yesterday = make_parsed({
         ("m1", "l1", "d1", 0): {9: 347638, 12: 0, 29: 0},
