@@ -74,6 +74,8 @@ def test_compare_lots_detects_new_and_removed_keys():
     assert diff["changed_lots"] == []
     assert [lot["key"] for lot in diff["new_lots"]] == [("m2", "l2", "d2", 0)]
     assert [lot["key"] for lot in diff["removed_lots"]] == [("m1", "l1", "d1", 0)]
+    assert diff["new_lots"][0]["values"] == today.lots[("m2", "l2", "d2", 0)]
+    assert diff["removed_lots"][0]["values"] == yesterday.lots[("m1", "l1", "d1", 0)]
 
 
 def test_compare_lots_matches_real_fixture_counts():
@@ -86,6 +88,9 @@ def test_compare_lots_matches_real_fixture_counts():
     assert len(diff["new_lots"]) == 1
     assert len(diff["removed_lots"]) == 2
     assert diff["new_lots"][0]["key"] == ("MNS08M6622326", "1B3C76", "TMP1230", 0)
+    new_lot_key = diff["new_lots"][0]["key"]
+    assert diff["new_lots"][0]["values"] == today.lots[new_lot_key]
+    assert diff["new_lots"][0]["values"][9] == 665285
 
     saw_to_die_mount = next(
         lot for lot in diff["changed_lots"]
