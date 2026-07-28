@@ -98,3 +98,10 @@ def test_parse_wip_sheet_disambiguates_duplicate_keys_by_occurrence():
 
     assert parsed.rows[first_key] == 18
     assert parsed.rows[second_key] == 19
+
+
+def test_parse_wip_sheet_populates_sheet_name_and_number_format():
+    parsed = parse_wip_sheet(FIXTURE_260721)
+
+    assert parsed.sheet_name == "gtk3387"
+    assert parsed.value_number_format == "#,##0"

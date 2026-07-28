@@ -51,6 +51,8 @@ class ParsedWip:
     stage_groups: dict
     lots: dict
     rows: dict
+    sheet_name: str = ""
+    value_number_format: str = "#,##0"
 
 
 def parse_wip_sheet(path):
@@ -87,4 +89,11 @@ def parse_wip_sheet(path):
         rows[key] = r
         r += 1
 
-    return ParsedWip(column_labels=labels, stage_groups=groups, lots=lots, rows=rows)
+    return ParsedWip(
+        column_labels=labels,
+        stage_groups=groups,
+        lots=lots,
+        rows=rows,
+        sheet_name=ws.title,
+        value_number_format="#,##0",
+    )
